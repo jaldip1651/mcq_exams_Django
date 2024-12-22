@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 60%;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            font-size: 18px;
+            color: #333;
+        }
+        .result p {
+            margin: 10px 0;
+        }
+        .status-passed {
+            color: green;
+            font-weight: bold;
+        }
+        .status-failed {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Exam Result</h2>
+    <div id="examResult" class="result">
+        <!-- Result will be displayed here dynamically -->
+        <p>Your Score: <span id="score">Loading...</span></p>
+        <p>Status: <span id="status">Loading...</span></p>
+    </div>
+</div>
+
+<script>
+    // Fetch the access token
+    function getAccessToken() {
+        return fetch('http://127.0.0.1:8000/api/token/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: 'jaldip',  // Replace with dynamic value if needed
+                password: '1122'     // Replace with dynamic value if needed
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.access) {
+                return data.access;  // Return the access token
+            } else {
+                throw new Error('Token not found');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting token:', error);
+            alert('Error getting token');
+        });
+    }
+
+    function fetchExamResult() {
+        getAccessToken().then(accessToken => {
+            const examId = 1;
+
+            fetch(`/api/exam_result/${examId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                const scoreElement = document.getElementById('score');
+                const statusElement = document.getElementById('status');
+
+                scoreElement.textContent = data.score;
+                if (data.passed) {
+                    statusElement.textContent = 'Passed';
+                    statusElement.classList.add('status-passed');
+                } else {
+                    statusElement.textContent = 'Failed';
+                    statusElement.classList.add('status-failed');
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error);
+            });
+        });
+    }
+
+    fetchExamResult();
+</script>
+
+</body>
+</html>

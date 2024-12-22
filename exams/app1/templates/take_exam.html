@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Exam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 50%;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        .question {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Take Exam</h2>
+    <form id="examForm">
+        {% csrf_token %}
+        <div id="examQuestions"></div>
+        <button type="submit">Submit Exam</button>
+    </form>
+</div>
+
+<script>
+    // Function to get the access token
+    function getAccessToken() {
+        return fetch('http://127.0.0.1:8000/api/token/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: 'jaldip',  // Replace with dynamic value if needed
+                password: '1122'     // Replace with dynamic value if needed
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.access) {
+                return data.access;  // Return the access token
+            } else {
+                throw new Error('Token not found');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting token:', error);
+            alert('Error getting token');
+        });
+    }
+
+    // Fetch exam questions from the API
+    function fetchExamQuestions() {
+        getAccessToken().then(accessToken => {
+            const examId = 1; // Example exam ID
+
+            fetch(`/api/exam_questions/${examId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                const examContainer = document.getElementById('examQuestions');
+                data.questions.forEach(question => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.classList.add('question');
+                    questionDiv.innerHTML = `
+                        <label>${question.text}</label><br>
+                        ${question.options.map(option =>
+                            `<input type="radio" name="answer_${question.id}" value="${option}"> ${option}<br>`
+                        ).join('')}
+                    `;
+                    examContainer.appendChild(questionDiv);
+                });
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error);
+            });
+        });
+    }
+
+    // Submit the exam answers
+    document.getElementById('examForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+        const answers = {};
+        formData.forEach((value, key) => {
+            if (key.startsWith('answer_')) {
+                answers[key.replace('answer_', '')] = value;
+            }
+        });
+
+        getAccessToken().then(accessToken => {
+            const examId = 1; // Example exam ID
+
+            fetch(`/api/take_exam/`, {
+                method: 'POST',
+                body: JSON.stringify({ exam_id: examId, answers: answers }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(`Score: ${data.score}, Passed: ${data.passed}`);
+                window.location.href = `/api/exam_result_page/${examId}/`;
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error);
+            });
+        });
+    });
+
+    fetchExamQuestions();
+</script>
+
+</body>
+</html>
